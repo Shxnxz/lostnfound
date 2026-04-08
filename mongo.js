@@ -1,4 +1,4 @@
-
+//database configuration for MongoDB Atlas
 const { MongoClient, ServerApiVersion } = require('mongodb');
 const uri = "mongodb+srv://dbuser:lostnfound1@lostnfound.3jwt2lm.mongodb.net/?appName=lostnfound";
 
