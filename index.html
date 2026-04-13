@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lost & Found Prototype</title>
+    <style>
+        body { font-family: system-ui, -apple-system, sans-serif; max-width: 800px; margin: 2rem auto; padding: 0 1rem; background: #f4f4f5; }
+        .card { background: white; padding: 1.5rem; border-radius: 8px; margin-bottom: 1.5rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        h2 { margin-top: 0; color: #111827; border-bottom: 2px solid #e5e7eb; padding-bottom: 0.5rem; }
+        .form-group { margin-bottom: 1rem; }
+        label { display: block; margin-bottom: 0.25rem; font-weight: bold; font-size: 0.875rem; }
+        input, select, textarea { width: 100%; padding: 0.5rem; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+        button { background: #2563eb; color: white; border: none; padding: 0.5rem 1rem; border-radius: 4px; cursor: pointer; font-weight: bold; }
+        button:hover { background: #1d4ed8; }
+        pre { background: #1f2937; color: #10b981; padding: 1rem; border-radius: 4px; overflow-x: auto; font-size: 0.875rem; }
+        table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
+        th, td { border: 1px solid #e5e7eb; padding: 0.5rem; text-align: left; }
+        th { background: #f9fafb; }
+        /* [ADDED] Extra button styles */
+        .btn-delete { background: #dc2626; }
+        .btn-delete:hover { background: #b91c1c; }
+        .btn-approve { background: #16a34a; }
+        .btn-approve:hover { background: #15803d; }
+        .btn-reject { background: #dc2626; }
+        .btn-reject:hover { background: #b91c1c; }
+    </style>
+</head>
+<body>
+
+    <h1>Lost & Found Dashboard</h1>
+    <p><strong>Note:</strong> You must create a user first. The system needs a User ID to create items or submit claims.</p>
+
+    <div class="card">
+        <h2>Create User (Get an ID)</h2>
+        <div class="form-group">
+            <label>Name</label>
+            <input type="text" id="userName" value="Tae">
+        </div>
+        <div class="form-group">
+            <label>Email</label>
+            <input type="email" id="userEmail" value="tae@university.edu">
+        </div>
+        <!-- [ADDED] Role dropdown -->
+        <div class="form-group">
+            <label>Role</label>
+            <select id="userRole">
+                <option value="user">User</option>
+                <option value="admin">Admin</option>
+            </select>
+        </div>
+        <button onclick="createUser()">Create User</button>
+        <p><strong>Active User ID:</strong> <span id="activeUserId" style="color:red;">None - Create a user first</span></p>
+        <!-- [ADDED] Show active role -->
+        <p><strong>Active Role:</strong> <span id="activeUserRole" style="color:gray;">—</span></p>
+    </div>
+
+    <div class="card">
+        <h2>Report Item</h2>
+        <div class="form-group">
+            <label>Title</label>
+            <input type="text" id="itemTitle" value="Asus Zenbook S16">
+        </div>
+        <div class="form-group">
+            <label>Type</label>
+            <select id="itemType">
+                <option value="lost">Lost</option>
+                <option value="found">Found</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label>Category</label>
+            <input type="text" id="itemCategory" value="Electronics">
+        </div>
+        <div class="form-group">
+            <label>Location</label>
+            <input type="text" id="itemLocation" value="Library 3rd Floor">
+        </div>
+        <button onclick="createItem()">Submit Item</button>
+        <pre id="itemOutput">Waiting for action...</pre>
+    </div>
+
+    <div class="card">
+        <h2>Database Items</h2>
+        <button onclick="fetchItems(); fetchReport();">Refresh Items Table</button>
+        <table id="itemsTable">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Title</th>
+                    <th>Type</th>
+                    <th>Status</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody id="itemsTableBody">
+            </tbody>
+        </table>
+    </div>
+
+    <!-- [ADDED] Admin-only claims section, hidden until admin logs in -->
+    <div class="card" id="claimsCard" style="display:none;">
+        <h2>Pending Claims (Admin Only)</h2>
+        <button onclick="fetchClaims()">Refresh Claims</button>
+        <table>
+            <thead>
+                <tr>
+                    <th>Item</th>
+                    <th>Claimed By</th>
+                    <th>Status</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody id="claimsTableBody">
+            </tbody>
+        </table>
+    </div>
+
+    <div class="card">
+        <h2>Report</h2>
+        <button onclick="fetchReport()">Refresh Report</button>
+        <div style="margin-top: 1rem; display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem;">
+            <div style="padding: 1rem; background: #eff6ff; border-radius: 4px; border-left: 4px solid #2563eb;">
+                <div style="font-size: 0.875rem; color: #1e40af; font-weight: bold;">Total Items</div>
+                <div id="statTotal" style="font-size: 1.5rem; font-weight: bold;">0</div>
+            </div>
+            <div style="padding: 1rem; background: #fff1f2; border-radius: 4px; border-left: 4px solid #e11d48;">
+                <div style="font-size: 0.875rem; color: #9f1239; font-weight: bold;">Lost Items</div>
+                <div id="statLost" style="font-size: 1.5rem; font-weight: bold;">0</div>
+            </div>
+            <div style="padding: 1rem; background: #f0fdf4; border-radius: 4px; border-left: 4px solid #16a34a;">
+                <div style="font-size: 0.875rem; color: #166534; font-weight: bold;">Found Items</div>
+                <div id="statFound" style="font-size: 1.5rem; font-weight: bold;">0</div>
+            </div>
+            <div style="padding: 1rem; background: #fdfaf1; border-radius: 4px; border-left: 4px solid #d97706;">
+                <div style="font-size: 0.875rem; color: #92400e; font-weight: bold;">Claimed</div>
+                <div id="statClaimed" style="font-size: 1.5rem; font-weight: bold;">0</div>
+            </div>
+            <div style="padding: 1rem; background: #f8fafc; border-radius: 4px; border-left: 4px solid #64748b;">
+                <div style="font-size: 0.875rem; color: #334155; font-weight: bold;">Unclaimed</div>
+                <div id="statUnclaimed" style="font-size: 1.5rem; font-weight: bold;">0</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:3000/api';
+        let currentUserId = null;
+        let currentUserRole = null; // [ADDED]
+
+        // --- 1. CREATE USER ---
+        async function createUser() {
+            const payload = {
+                name: document.getElementById('userName').value,
+                email: document.getElementById('userEmail').value,
+                role: document.getElementById('userRole').value // [ADDED] read from dropdown
+            };
+
+            try {
+                const res = await fetch(`${API_BASE}/users`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const data = await res.json();
+                
+                if(res.ok) {
+                    currentUserId = data._id;
+                    currentUserRole = data.role; // [ADDED]
+
+                    document.getElementById('activeUserId').innerText = currentUserId;
+                    document.getElementById('activeUserId').style.color = 'green';
+                    document.getElementById('activeUserRole').innerText = currentUserRole.toUpperCase(); // [ADDED]
+
+                    // [ADDED] Show claims section only for admin
+                    if (currentUserRole === 'admin') {
+                        document.getElementById('claimsCard').style.display = '';
+                        fetchClaims();
+                    }
+
+                    alert('User created successfully!');
+                } else {
+                    alert('Error: ' + data.message);
+                }
+            } catch (err) {
+                console.error(err);
+                alert('Connection failed. Is the backend running?');
+            }
+        }
+
+        // --- 2. CREATE ITEM ---
+        async function createItem() {
+            if (!currentUserId) {
+                alert("You must create a user first to get an ID!");
+                return;
+            }
+
+            const payload = {
+                title: document.getElementById('itemTitle').value,
+                category: document.getElementById('itemCategory').value,
+                type: document.getElementById('itemType').value,
+                location: document.getElementById('itemLocation').value,
+                date: new Date().toISOString().split('T')[0],
+                user_id: currentUserId
+            };
+
+            try {
+                const res = await fetch(`${API_BASE}/items`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const data = await res.json();
+                
+                document.getElementById('itemOutput').innerText = JSON.stringify(data, null, 2);
+                if(res.ok) {
+                    fetchItems();
+                    fetchReport();
+                }
+            } catch (err) {
+                document.getElementById('itemOutput').innerText = 'Error: ' + err.message;
+            }
+        }
+
+        // --- 3. FETCH ITEMS & RENDER TABLE ---
+        async function fetchItems() {
+            try {
+                const res = await fetch(`${API_BASE}/items`);
+                const items = await res.json();
+                
+                const tbody = document.getElementById('itemsTableBody');
+                tbody.innerHTML = '';
+
+                items.forEach(item => {
+                    const tr = document.createElement('tr');
+                    const isClaimed = item.status === 'claimed';
+
+                    // [ADDED] Build action cell: Claim button always shown, Delete only for admin
+                    let actionHtml = `
+                        <button style="padding: 0.25rem 0.5rem; font-size: 0.75rem;"
+                                onclick="claimItem('${item._id}')"
+                                ${isClaimed ? 'disabled style="background:#ccc;"' : ''}>
+                            Claim
+                        </button>`;
+
+                    // [ADDED] Delete button for admin only
+                    if (currentUserRole === 'admin') {
+                        actionHtml += `
+                        <button class="btn-delete" style="padding: 0.25rem 0.5rem; font-size: 0.75rem; margin-left: 0.25rem;"
+                                onclick="deleteItem('${item._id}')">
+                            Delete
+                        </button>`;
+                    }
+
+                    tr.innerHTML = `
+                        <td style="font-size: 0.75rem; color: #6b7280;">${item._id}</td>
+                        <td>${item.title}</td>
+                        <td><strong>${item.type.toUpperCase()}</strong></td>
+                        <td>${item.status}</td>
+                        <td>${actionHtml}</td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        // --- 4. CLAIM ITEM ---
+        async function claimItem(itemId) {
+            if (!currentUserId) {
+                alert("You must create a user first to submit a claim.");
+                return;
+            }
+
+            const payload = {
+                item_id: itemId,
+                claimed_by: currentUserId
+            };
+
+            try {
+                const res = await fetch(`${API_BASE}/claims`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const data = await res.json();
+                
+                if(res.ok) {
+                    alert('Claim submitted! (Admin approval required)');
+                    if (currentUserRole === 'admin') fetchClaims(); // [ADDED]
+                } else {
+                    alert('Error: ' + data.message);
+                }
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        // [ADDED] --- 5. DELETE ITEM (Admin only) ---
+        async function deleteItem(itemId) {
+            if (!confirm('Are you sure you want to delete this item?')) return;
+            try {
+                const res = await fetch(`${API_BASE}/items/${itemId}`, { method: 'DELETE' });
+                if (res.ok) {
+                    fetchItems();
+                    fetchReport();
+                } else {
+                    const data = await res.json();
+                    alert('Error: ' + data.message);
+                }
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        // [ADDED] --- 6. FETCH CLAIMS (Admin only) ---
+        async function fetchClaims() {
+            try {
+                const res = await fetch(`${API_BASE}/claims`);
+                const claims = await res.json();
+
+                const tbody = document.getElementById('claimsTableBody');
+                tbody.innerHTML = '';
+
+                claims.forEach(claim => {
+                    const tr = document.createElement('tr');
+                    const isPending = claim.status === 'pending';
+
+                    const itemTitle = claim.item_id ? claim.item_id.title : '(deleted)';
+                    const claimantName = claim.claimed_by ? claim.claimed_by.name : 'Unknown';
+
+                    const actionHtml = isPending
+                        ? `<button class="btn-approve" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;" onclick="updateClaim('${claim._id}', 'approved')">Approve</button>
+                           <button class="btn-reject"  style="padding: 0.25rem 0.5rem; font-size: 0.75rem; margin-left: 0.25rem;" onclick="updateClaim('${claim._id}', 'rejected')">Reject</button>`
+                        : `<em style="color:#6b7280; font-size:0.8rem;">${claim.status}</em>`;
+
+                    tr.innerHTML = `
+                        <td>${itemTitle}</td>
+                        <td>${claimantName}</td>
+                        <td>${claim.status}</td>
+                        <td>${actionHtml}</td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        // [ADDED] --- 7. APPROVE / REJECT CLAIM (Admin only) ---
+        async function updateClaim(claimId, status) {
+            try {
+                const res = await fetch(`${API_BASE}/claims/${claimId}`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ status })
+                });
+                if (res.ok) {
+                    fetchClaims();
+                    fetchItems();
+                    fetchReport();
+                } else {
+                    const data = await res.json();
+                    alert('Error: ' + data.message);
+                }
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        // --- 8. REPORT ---
+        async function fetchReport() {
+            try {
+                const res = await fetch(`${API_BASE}/items`);
+                const items = await res.json();
+                let lost = 0, found = 0, claimed = 0, unclaimed = 0;
+                items.forEach(item => {
+                    if (item.type === 'lost') lost++;
+                    if (item.type === 'found') found++;
+                    if (item.status === 'claimed') claimed++;
+                    if (item.status === 'unclaimed') unclaimed++;
+                });
+                document.getElementById('statTotal').innerText = items.length;
+                document.getElementById('statLost').innerText = lost;
+                document.getElementById('statFound').innerText = found;
+                document.getElementById('statClaimed').innerText = claimed;
+                document.getElementById('statUnclaimed').innerText = unclaimed;
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        // Fetch items on load
+        fetchItems();
+        fetchReport();
+    </script>
+</body>
+</html>

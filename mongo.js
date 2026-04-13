@@ -1,7 +1,7 @@
-//database configuration for MongoDB Atlas
 const { MongoClient, ServerApiVersion } = require('mongodb');
 const uri = "mongodb+srv://dbuser:lostnfound1@lostnfound.3jwt2lm.mongodb.net/?appName=lostnfound";
 const uri2 = "mongodb://dbuser:lostnfound1@ac-ryk1bbx-shard-00-00.3jwt2lm.mongodb.net:27017,ac-ryk1bbx-shard-00-01.3jwt2lm.mongodb.net:27017,ac-ryk1bbx-shard-00-02.3jwt2lm.mongodb.net:27017/?ssl=true&replicaSet=atlas-964jea-shard-0&authSource=admin&appName=lostnfound";
+
 // Create a MongoClient with a MongoClientOptions object to set the Stable API version
 const client = new MongoClient(uri2, {
   serverApi: {
@@ -13,7 +13,7 @@ const client = new MongoClient(uri2, {
 
 async function run() {
   try {
-    // Connect the client to the server	(optional starting in v4.7)
+    // Connect the client to the server    (optional starting in v4.7)
     await client.connect();
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
